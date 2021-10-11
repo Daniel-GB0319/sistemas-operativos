@@ -9,11 +9,9 @@
 #include <sys/types.h>
 
 //Variables globales
-int fd = -1;
+int fd = -1, status;
 pid_t pid;
 int asientos[5];
-char confirm[] = "Vuelo y asientos reservados correctamente";
-char asientooc[] = "El asiento esta ocupado";
 int respClient;
 
 int main(void){
@@ -28,7 +26,7 @@ int main(void){
     //Bucle de servidor Infinito 
     while (x != 1){
         printf("SERVIDOR ACTIVO...");
-        fd = open("/tmp/mi_fifo", O_RDONLY);
+        fd = open("/tmp/pract2_hijos", O_RDONLY);
         n = read(fd, &buf[0], sizeof(int));
         
         if(n==1){ // Cliente se ha conectado
@@ -42,8 +40,8 @@ int main(void){
             printf("!!! Cliente Conectado !!!");
             
             //Se envian los boletos disponibles
-            mkfifo("/tmp/mi_fifo", 0666);
-            fd = open("/tmp/mi_fifo", O_WRONLY);
+            mkfifo("/tmp/pract2_hijos", 0666);
+            fd = open("/tmp/pract2_hijos", O_WRONLY);
             for (int i = 0; i < 5; i++){
                 write(fd, &asientos[i], sizeof(int));
             }
@@ -52,12 +50,12 @@ int main(void){
             printf("\nLista de Boletos Disponibles Enviados\n");
             
             // Se comprueba respuesta de cliente sobre comprar o no boletos
-            fd = open("/tmp/mi_fifo", O_RDONLY);
+            fd = open("/tmp/pract2_hijos", O_RDONLY);
             n = read(fd, &respClient, sizeof(int));
             if (respClient == 1){ // Cliente compra
-                printf("/nCliente ha decidido comprar Boletos/n/n");
+                printf("\nCliente ha decidido comprar Boletos\n\n");
                 // Se actualizan la disponibilidad de lugares
-                fd = open("/tmp/mi_fifo", O_RDONLY);
+                fd = open("/tmp/pract2_hijos", O_RDONLY);
                 for (int i = 0; i < 5; i++){
                     n = read(fd, &asientos[i], sizeof(int));
                     printf("\nLugar #%d : %d\n",i, asientos[i]);
@@ -65,12 +63,13 @@ int main(void){
                 close(fd);
                 exit(0);
             }else{
-                printf("/nCliente no quiere comprar Boletos/n/n");
+                printf("\nCliente no quiere comprar Boletos\n\n");
+                exit(0);
             }
         }else { // Es el padre   
         printf("\nSoy el Padre = %d\n",getpid() );
-        wait(NULL);
-        printf("Soy el Padre = %d\n",getpid());
+        wait(&status);
+        printf("\nProceso hijo finalizado");
 
         } // Termina mensajes Padre
         } // Termina proceso para el cliente

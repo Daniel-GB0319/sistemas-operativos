@@ -16,8 +16,8 @@ int main(){
     printf("\n-- Sistema de Compra de Boletos --\n");
     
     // Cliente avisa a Servidor que se ha conectado
-    mkfifo("/tmp/mi_fifo", 0666);
-    fd = open("/tmp/mi_fifo", O_WRONLY);
+    mkfifo("/tmp/pract2_hijos", 0666);
+    fd = open("/tmp/pract2_hijos", O_WRONLY);
     write(fd, &buf[0], 1);
     close(fd);
 
@@ -25,7 +25,7 @@ int main(){
     printf("\nLos lugares para el vuelo son:\n");
     printf("1 = Disponible para Compra / 0 = Ocupado\n\n");
     
-    fd = open("/tmp/mi_fifo", O_RDONLY);
+    fd = open("/tmp/pract2_hijos", O_RDONLY);
     for (int i = 0; i < 5; i++){
         n = read(fd, &buf[i], sizeof(int));
         printf("Lugar #%d: %d\n",i, buf[i]);
@@ -38,8 +38,8 @@ int main(){
     scanf("%d", &Confirmacion);
 
     // Se informa al servidor sobre la confirmación del cliente
-    mkfifo("/tmp/mi_fifo", 0666);
-    fd = open("/tmp/mi_fifo", O_WRONLY);
+    mkfifo("/tmp/pract2_hijos", 0666);
+    fd = open("/tmp/pract2_hijos", O_WRONLY);
     write(fd, &Confirmacion, 1);
     close(fd);
 
@@ -59,8 +59,8 @@ int main(){
             }
         }
         // Se envian los boletos comprados a Servidor
-        mkfifo("/tmp/mi_fifo", 0666);
-        fd = open("/tmp/mi_fifo", O_WRONLY);
+        mkfifo("/tmp/pract2_hijos", 0666);
+        fd = open("/tmp/pract2_hijos", O_WRONLY);
         for (i = 0; i < 5; i++){
             write(fd, &buf[i], sizeof(int));
         }
