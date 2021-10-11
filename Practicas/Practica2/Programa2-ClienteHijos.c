@@ -1,17 +1,13 @@
-#include <sys/stat.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <sys/stat.h>
 #include <fcntl.h>
 #include <string.h>
 
-//Variables globales
-int fd, n, lugar, i;
-int buf[10000];
-char bufc[10000];
-int personas, Confirmacion;
-
 int main(){
+    int fd, n, lugar, i, boletos, respCliente, buf[10];
+
     printf("\n***** Practica2 -- Procesos *****\n");
     printf("\n-- Sistema de Compra de Boletos --\n");
     
@@ -21,7 +17,7 @@ int main(){
     write(fd, &buf[0], 1);
     close(fd);
 
-    // Se imprimen asientos
+    // Se imprimen los lugares
     printf("\nLos lugares para el vuelo son:\n");
     printf("1 = Disponible para Compra / 0 = Ocupado\n\n");
     
@@ -32,23 +28,22 @@ int main(){
     };
     close(fd);
 
-    //Confirmación de vuelos
+    //Confirmación de compra de boletos
     printf("\n\nDesea comprar boletos para el vuelo? (Si=1 / No=0)\n");
     printf("Ingrese el numero correspondiente a la opcion deseada: ");
-    scanf("%d", &Confirmacion);
+    scanf("%d", &respCliente);
 
     // Se informa al servidor sobre la confirmación del cliente
     mkfifo("/tmp/pract2_hijos", 0666);
     fd = open("/tmp/pract2_hijos", O_WRONLY);
-    write(fd, &Confirmacion, 1);
+    write(fd, &respCliente, 1);
     close(fd);
 
-    if (Confirmacion == 1){
-        //Tubería de reserva de asientos
+    if (respCliente == 1){// Cliente quiere comprar boletos
         printf("\n\nCuantos boletos desea comprar?: ");
-        scanf("%d", &personas);
+        scanf("%d", &boletos);
         
-        for (i = 0; i < personas; i++){
+        for (i = 0; i < boletos; i++){
             printf("\n# del Lugar que desea Comprar: \n");
             scanf("%d", &lugar);
         //se verifica si lugar esta ocupado o no

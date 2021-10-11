@@ -1,28 +1,23 @@
-//Generales y fifo
-#include <sys/stat.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <sys/stat.h>
 #include <fcntl.h>
 #include <string.h>
 #include <wait.h>
 #include <sys/types.h>
 
-//Variables globales
-int fd = -1, status;
-pid_t pid;
-int asientos[5];
-int respClient;
 
 int main(void){
-    int buf[10000];
-    int n, x = 0 ;
+    int buf[10], respClient, n, x = 0, fd = -1, status, asientos[5];
+    pid_t pid;
 
     // se inicializan lugares a disponibles
     for(n=0;n<5;n++){
         asientos[n]=1;
     }
     n=0;
+
     //Bucle de servidor Infinito 
     while (x != 1){
         printf("SERVIDOR ACTIVO...");
@@ -35,7 +30,7 @@ int main(void){
                 perror("\nError al crear el proceso\n");
                 exit(-1);
             }
-        if (pid == 0){
+        if (pid == 0){ // Es el Proceso Hijo
             printf("\nSoy el Hijo = %d y mi Padre es = %d\n",getpid(),getppid());      
             printf("!!! Cliente Conectado !!!");
             
@@ -62,7 +57,7 @@ int main(void){
                 }
                 close(fd);
                 exit(0);
-            }else{
+            }else{ // Cliente no compra
                 printf("\nCliente no quiere comprar Boletos\n\n");
                 exit(0);
             }
@@ -70,7 +65,6 @@ int main(void){
         printf("\nSoy el Padre = %d\n",getpid() );
         wait(&status);
         printf("\nProceso hijo finalizado");
-
         } // Termina mensajes Padre
         } // Termina proceso para el cliente
         sleep(3000);
