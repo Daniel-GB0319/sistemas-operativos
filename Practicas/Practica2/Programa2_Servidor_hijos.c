@@ -12,11 +12,9 @@
 int fd = -1;
 pid_t pid;
 int asientos[5];
-char bufres[] = "1,2,3,4,5";
 char confirm[] = "Vuelo y asientos reservados correctamente";
 char asientooc[] = "El asiento esta ocupado";
-char vuelolleno[] = "El vuelo esta lleno";
-int bufc;
+int respClient;
 
 int binarySearch(int arr[], int l, int r, int x){
     while (l <= r){
@@ -41,7 +39,6 @@ int binarySearch(int arr[], int l, int r, int x){
     return -1;
 }
 
-
 void pipera(int fd, int asientos[]) //Lectura de la reserva de asientos el 5 es el tamaño de los asientos
 {
     int buf[10000];
@@ -62,21 +59,6 @@ void pipera(int fd, int asientos[]) //Lectura de la reserva de asientos el 5 es 
     close(fd);
 }
 
-void pipewc(int fd) //Pipe de confirmacion
-{
-    mkfifo("/tmp/mi_fifo", 0666);
-    fd = open("/tmp/mi_fifo", O_WRONLY);
-    write(fd, confirm, sizeof(confirm));
-    close(fd);
-}
-
-void pipemenur(int fd){
-    int n;
-    fd = open("/tmp/mi_fifo", O_RDONLY);
-    n = read(fd, &bufc, sizeof(int));
-    printf("Confirmacion: %d\n", bufc);
-}
-
 int main(void){
     int buf[10000];
     int n, x = 0 ;
@@ -88,7 +70,7 @@ int main(void){
     n=0;
     //Bucle de servidor Infinito 
     while (x != 1){
-        printf("SERVIDOR ACTIVO\n\nESPERANDO A UN CLIENTE...");
+        printf("SERVIDOR ACTIVO...");
         fd = open("/tmp/mi_fifo", O_RDONLY);
         n = read(fd, &buf[0], sizeof(int));
         
@@ -106,29 +88,30 @@ int main(void){
             mkfifo("/tmp/mi_fifo", 0666);
             fd = open("/tmp/mi_fifo", O_WRONLY);
             for (int i = 0; i < 5; i++){
-                write(fd, &buf[i], sizeof(int));
+                write(fd, &asientos[i], sizeof(int));
             }
             close(fd);
 
             printf("\nLista de Boletos Disponibles Enviados\n");
             
-            pipemenur(fd); //Tuberia de confirmacion de compra de vuelos
-            if (bufc == 1){
+            // Se comprueba respuesta de cliente sobre comprar o no boletos
+            fd = open("/tmp/mi_fifo", O_RDONLY);
+            n = read(fd, &respClient, sizeof(int));
+            if (respClient == 1){ // Cliente compra
+                printf("/nCliente ha decidido comprar Boletos/n/n");
                 pipera(fd, asientos); //tuberia de envio de asientos disponibles
-                pipewc(fd); //Tuberia de confirmacion
+            }else{
+                printf("/nCliente no quiere comprar Boletos/n/n");
+                wait(NULL);
+                printf("Soy el Padre = %d\n",getpid());
             }
-        }else{
-            wait(NULL);
-            printf("\n\t\t\tHola soy el proceso padre\n");
-            printf("\n\t\t\tMi identificador es: %d\n", getpid());
-            printf("\n\t\t\tMi proceso padre es: %d\n", getppid());
-        }
-        printf("\n\t\t\tHola soy el proceso padre fuera del if\n");
-        printf("\n\t\t\tMi identificador es: %d\n", getpid());
-        printf("\n\t\t\tMi proceso padre es: %d\n", getppid());
-
-        }
+        }else { // Es el padre   
+        printf("\nSoy el Padre = %d\n",getpid() );
+    
+        } // Termina mensajes Padre
+        } // Termina proceso para el cliente
+        sleep(3000);
         system("clear");
-    }
+    } // Termina Bucle While
     return 0;
 }
