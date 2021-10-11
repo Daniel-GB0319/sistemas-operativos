@@ -16,49 +16,6 @@ char confirm[] = "Vuelo y asientos reservados correctamente";
 char asientooc[] = "El asiento esta ocupado";
 int respClient;
 
-int binarySearch(int arr[], int l, int r, int x){
-    while (l <= r){
-        int m = l + (r - l) / 2;
-        int dato = 0;
-        // Check if x is present at mid
-        if (arr[m] == x){ //Se verifica si el valor buscado esta en la m-esima posicion y regresa el dato
-            dato = x;
-            arr[m] = 0;
-            return dato;
-        }
-        // If x greater, ignore left half
-
-        if (arr[m] < x) //Se verifica si el valor buscado es mayor al valor en la m-esima posicion
-            l = m + 1;  //Se delimita la parte izquierda del nuevo arreglo a analizar, para descartar los valores en donde no se encuentra el valor buscado
-        // If x is smaller, ignore right half
-        else           //Se verifica si el valor buscado es menor al valor en la m-esima posicion
-            r = m - 1; //Se delimita la parte derecha del nuevo arreglo a analizar, para descartar los valores en donde no se encuentra el valor buscado
-    }
-    // if we reach here, then element was
-    // not present
-    return -1;
-}
-
-void pipera(int fd, int asientos[]) //Lectura de la reserva de asientos el 5 es el tamaño de los asientos
-{
-    int buf[10000];
-    int reserva[10000];
-    int n;
-    fd = open("/tmp/mi_fifo", O_RDONLY);
-    for (int i = 0; i < 5; i++)
-    {
-        n = read(fd, &buf[i], sizeof(int));
-        reserva[i] = binarySearch(asientos, 0, 5, buf[i]);
-        if (reserva[i] != -1){
-            printf("Asiento del Cliente: %d\n", reserva[i]);
-        }
-    }
-    for (int i = 0; i < 5; i++){
-        printf("\nAsiento disponible %d\n", asientos[i]);
-    }
-    close(fd);
-}
-
 int main(void){
     int buf[10000];
     int n, x = 0 ;
@@ -99,15 +56,22 @@ int main(void){
             n = read(fd, &respClient, sizeof(int));
             if (respClient == 1){ // Cliente compra
                 printf("/nCliente ha decidido comprar Boletos/n/n");
-                pipera(fd, asientos); //tuberia de envio de asientos disponibles
+                // Se actualizan la disponibilidad de lugares
+                fd = open("/tmp/mi_fifo", O_RDONLY);
+                for (int i = 0; i < 5; i++){
+                    n = read(fd, &asientos[i], sizeof(int));
+                    printf("\nLugar #%d : %d\n",i, asientos[i]);
+                }
+                close(fd);
+                exit(0);
             }else{
                 printf("/nCliente no quiere comprar Boletos/n/n");
-                wait(NULL);
-                printf("Soy el Padre = %d\n",getpid());
             }
         }else { // Es el padre   
         printf("\nSoy el Padre = %d\n",getpid() );
-    
+        wait(NULL);
+        printf("Soy el Padre = %d\n",getpid());
+
         } // Termina mensajes Padre
         } // Termina proceso para el cliente
         sleep(3000);
