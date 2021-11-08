@@ -21,14 +21,14 @@ typedef struct Cab {
 
 
 typedef  cabecera * lista;
-typedef  NODO * link;
+typedef  NODO * linkList;
 typedef  enum men { NO_MEMORY , OK , INDEXOUTOFBOUND, EMPTY } mensaje;
 typedef  enum b { FALSE , TRUE } booleano;
 
 
 // %%% Prototipos %%% 
 carrito get ( int pos , lista l );  
-link ubicar ( int pos , lista l );                                        
+linkList ubicar ( int pos , lista l );                                        
 mensaje add ( int pos, carrito E , lista l );         
 mensaje borrar (  int Pos , lista l );                   
 booleano empty ( lista l  );
@@ -41,16 +41,16 @@ void vaciarlista( lista l );
 // %%% Funciones %%%
 carrito get ( int pos , lista l ) {
 	carrito copia;
-	link Ite= ubicar (pos , l);
+	linkList Ite= ubicar (pos , l);
 	if (Ite == NULL)
 	    return copia;
 	copia=Ite->Inf;
 	return copia;   
 }                                        
 
-link ubicar ( int p , lista l ){
+linkList ubicar ( int p , lista l ){
 	int mitad,i;
-	link Ite;
+	linkList Ite;
 	if (l == NULL || empty (l))
 	    return NULL;    
 	if ( p == 0 )    
@@ -76,8 +76,8 @@ link ubicar ( int p , lista l ){
 } 
 
 mensaje add ( int pos, carrito E , lista l ){
-	link act,ant;
-	link temp = (link) malloc (sizeof(NODO));
+	linkList act,ant;
+	linkList temp = (linkList) malloc (sizeof(NODO));
 	if (temp == NULL)
 	    return NO_MEMORY; 
 	temp->Inf=E;
@@ -110,7 +110,7 @@ mensaje add ( int pos, carrito E , lista l ){
 }        
 
 mensaje borrar (  int p , lista l ){
-    link temp,s,a,act;
+    linkList temp,s,a,act;
 	if (l == NULL || empty (l))
 	    return EMPTY;
 	if ( !(p>=0 && p<l->NE) )    
@@ -151,7 +151,7 @@ booleano empty ( lista l  ){
 }
 
 mensaje set ( int p , carrito E , lista l){
-	link Ite;
+	linkList Ite;
 	if (l == NULL || empty (l))
 	    return EMPTY;
 	if ( !(p>=0 && p<l->NE) )    
