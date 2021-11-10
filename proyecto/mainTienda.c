@@ -153,16 +153,16 @@ void menuCliente(){
 							printf("Ingrese el NUMERO de producto que desea agregar al carrito y presione ENTER (0 - %d) ~& ",catalogo->NE);
 							scanf("%i",&i);
 							if (i>=0 && i<=catalogo->NE){
-										
+										condicional=0;
 								// Se verifica si carrito esta vacio
-								if(!empty(cartClient)){ // Carrito no Vacio
+								if(empty(cartClient)==FALSE){ // Carrito no Vacio
 									strcpy(auxList.name,get(i,catalogo).name);
 									auxList.cant=get(i,catalogo).cant;
 									auxList.precio=get(i,catalogo).precio;
 
 									// Se verifica si existe el mismo producto elegido del catalogo en el carrito
 										for(j=0;j<cartClient->NE;j++){ // Busca si ya existe el producto seleccionado en el carrito
-											if(auxList.name==get(j,cartClient).name && auxList.precio==get(j,cartClient).precio){ 
+											if(strcmp(auxList.name,get(j,cartClient).name)==0){ 
 											// Se encontro el mismo producto en carrito, se aumentara la cantidad en 1
 												// Se actualiza cantidad de producto en carrito +1
 												strcpy(auxList.name,get(j,cartClient).name);
@@ -189,7 +189,7 @@ void menuCliente(){
 										}
 									
 								}
-								if(condicional!=1){ // Producto nuevo en carrito
+								if(condicional==0){ // Producto nuevo en carrito
 									strcpy(auxList.name,get(i,catalogo).name);
 									auxList.cant=1;
 									auxList.precio=get(i,catalogo).precio;
