@@ -2,7 +2,7 @@
 #include <stdlib.h>
 
 typedef struct Carrito_Compras {
-	char name[40]; // Nombre del Producto
+	char name[21]; // Nombre del Producto
 	int cant; // Cantidad del Producto
 	int precio; // Precio del producto		
 } carrito;
