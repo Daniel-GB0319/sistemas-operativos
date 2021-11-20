@@ -37,9 +37,14 @@ int main(int argc, char *argv[]) {
 		exit(-1);
 	}else{
 		printf("Servidor Inicializandose! \n");
-		sleep(2);
 	}
-	
+	/*int fd, i, buf[10], n;
+
+	printf("SERVIDOR ACTIVO...");
+        fd = open("/tmp/mainTienda", O_RDONLY);
+        n = read(fd, &buf[0], sizeof(int));
+		close(fd);*/
+
 	//Se crean las listas a utilizar
 	crearlista(&catalogo); // Catalogo de Productos de la Tienda
 	
@@ -95,6 +100,8 @@ int main(int argc, char *argv[]) {
 			break;
 
 			case 2: // Opcion Conexion
+			    printf("\nEjecute programa cliente...");
+				sleep(1);
 				printf("\nEsperando Conexion... ");
 				
 				do{
@@ -430,4 +437,3 @@ void menuAdmin(){
 		}
 	}while(menu!=0); 
 }
-
