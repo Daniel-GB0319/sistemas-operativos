@@ -2,7 +2,7 @@
 #include <stdbool.h>
 #include <string.h>
 #include <pthread.h>
-#include "../include/systemv.h"
+#include "include/systemv.h"
 
 void atender_cliente(void *argumentos);
 
