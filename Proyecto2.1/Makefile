@@ -30,4 +30,4 @@ all : servidor cliente proveedor administrador
 clean :
 	@ipcrm -a
 	@rm -f sem_* shm_*
-	@rm -f servidor cliente *.o *.d
+	@rm -f servidor cliente proveedor administrador *.o *.d
