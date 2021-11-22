@@ -23,7 +23,7 @@ int main(void)
 
     /* -------------------- Comunicación con el servidor ---------------------- */
 
-    comunicacion[0] = 2; // Pasamos el tipo de proceso al servidor
+    comunicacion[0] = 3; // Pasamos el tipo de proceso al servidor
 
     up(sem_servidor);
     printf("Obteniendo llaves...\n");
