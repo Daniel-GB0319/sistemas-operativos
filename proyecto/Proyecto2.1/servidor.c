@@ -22,8 +22,9 @@ void menuProveedor();
 lista catalogo,cartClient;
 carrito auxList;
 unsigned int server,menu,submenu,pos,i,j,n,fd,condicional,totalClient,auxCant,passAdmin,passProveedor;
-char auxString[21];
+char auxString[21], *contents = NULL;
 unsigned status;
+FILE* fileCatalogo;
 
 int main(void)
 {
@@ -110,31 +111,10 @@ int main(void)
 
     //Se crean las listas a utilizar
 	crearlista(&catalogo); // Catalogo de Productos de la Tienda
+	crearlista(&cartClient);
 	
-	//Se precargan productos en la lista "Catalogo de Productos"
-	strcpy(auxList.name,"Cuaderno");
-	auxList.cant=3;
-	auxList.precio=10;
-	add(0,auxList,catalogo); 
-
-	strcpy(auxList.name,"Boligrafo");
-	auxList.cant=3;
-	auxList.precio=5;
-	add(1,auxList,catalogo);
-	
-	strcpy(auxList.name,"Libro");
-	auxList.cant=3;
-	auxList.precio=20;
-	add(2,auxList,catalogo);
-	
-	strcpy(auxList.name,"Mochila");
-	auxList.cant=3;
-	auxList.precio=10;
-	add(3,auxList,catalogo);
-
-	// Se inicializan Contraseñas por default
-	passAdmin = 100000;
-	passProveedor = 100000;
+	passAdmin=123456;
+	passProveedor=123456;
 
 	do{ // Inicia SERVIDOR
 		system("clear");
@@ -168,7 +148,7 @@ int main(void)
                     parametros_administrador[0] = 'x';
                     parametros_administrador[1] = 'x';
 
-				printf("\nIngrese la contraseña de Administrador (Si es ejecucion por primera vez, ingrese 100000 ) ~& ");
+				printf("\nIngrese la contraseña de Administrador (Si es ejecucion por primera vez, ingrese 123456 ) ~& ");
 				scanf("%d",&i);
 				if(i>=100000 && i<=999999){ // Contraseña Ingresada dentro del rango permitido
 					if (i == passAdmin){
@@ -235,7 +215,11 @@ int main(void)
             }
             break;
 			case 0:
+				
 				printf("!!! Gracias por Utilizar Escommerce !!! Hasta la Proxima \n\n");
+				free(contents);
+				exit(0);
+
 			break;
 		
 			default:
@@ -247,6 +231,7 @@ int main(void)
 	} while (server!=0);
 	
 	liberarlista (&catalogo);
+	liberarlista (&cartClient);
 	return 0;
 }
 
@@ -257,6 +242,31 @@ int main(void)
 // **************************************************************************** ADMINISTRADOR *******************************************************************************************
 //***************************************************************************************************************************************************************************************
 void menuAdmin(){
+
+	// Se abre Fichero
+	fileCatalogo = fopen("Catalogo.txt","r+");
+	if(fileCatalogo==NULL){
+		printf("\n!!! No se ha podido acceder al archivo Catalogo.txt !!!\n ");
+		exit(-1); 
+	}
+
+	//Se precargan productos en la lista "Catalogo de Productos"
+    size_t len = 0;
+	pos=0;
+    while (getline(&contents, &len, fileCatalogo) != -1){
+        strcpy(auxList.name,contents);
+		getline(&contents, &len, fileCatalogo);
+		auxList.cant=atoi(contents);
+		getline(&contents, &len, fileCatalogo);
+		auxList.precio=atoi(contents);
+
+		add (pos,auxList,catalogo);
+		pos++;
+		//printf("%s", contents);
+    }
+	pos=0;
+	fclose(fileCatalogo);
+
 	do{// Comienza Menu Principal del Programa
 		system("clear");
 		printf("\t*************** Proyecto Tienda Online ***************\n\n");
@@ -528,6 +538,21 @@ void menuAdmin(){
 			break;
 			
 			case 0: // Mensaje al salir del programa
+
+			if (!empty(catalogo)){ // Catalogo Tiene Productos  
+
+					fileCatalogo = fopen("Catalogo.txt","w+"); // Se abre archivo para escritura
+					if(fileCatalogo==NULL){
+						printf("\n!!! No se ha podido acceder al archivo Catalogo.txt !!!\n ");
+						exit(-1); 
+					}
+
+					for(i=0;i<catalogo->NE;i++){ // Se imprimen los elementos de la lista "Catalogo de Productos Disponibles"
+						fprintf(fileCatalogo,"%s%d\n%d\n",get(i,catalogo).name, get(i,catalogo).cant, get(i,catalogo).precio);
+					}
+					fclose(fileCatalogo);
+				}
+
 				printf("\n!!! Hasta la proxima !!! Presione Enter para Continuar... "); getchar(); getchar(); system("clear"); main();
 			break;
 
@@ -536,7 +561,35 @@ void menuAdmin(){
 	}while(menu!=0); 
 }
 
+/*----------------------------------------------------------------------- CLIENTE ---------------------------------------------------------------------------------------------
+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------*/
+
 void menuCliente(){
+
+// Se abre Fichero
+	fileCatalogo = fopen("Catalogo.txt","r+");
+	if(fileCatalogo==NULL){
+		printf("\n!!! No se ha podido acceder al archivo Catalogo.txt !!!\n ");
+		exit(-1); 
+	}
+
+	//Se precargan productos en la lista "Catalogo de Productos"
+    size_t len = 0;
+	pos=0;
+    while (getline(&contents, &len, fileCatalogo) != -1){
+        strcpy(auxList.name,contents);
+		getline(&contents, &len, fileCatalogo);
+		auxList.cant=atoi(contents);
+		getline(&contents, &len, fileCatalogo);
+		auxList.precio=atoi(contents);
+
+		add (pos,auxList,catalogo);
+		pos++;
+		//printf("%s", contents);
+
+    }
+	pos=0;
+	fclose(fileCatalogo);
 
 do{// Comienza Menu Principal del Cliente
 		printf("\t*************** Proyecto Tienda Online ***************\n\n");
@@ -546,10 +599,6 @@ do{// Comienza Menu Principal del Cliente
 		printf("Ingrese el NUMERO de la opcion deseada y presione ENTER ~& ");
 		scanf("%i",&menu);
 	
-		/* PROBABLEMENTE SE CONFIRME COMPRA AL DAR OPCION SALIR DE LA CUENTA CLIENTE, SE MOSTRARA EL CARRITO Y CALCULARA EL TOTAL.
-		SI CLIENTE DECIDE NO COMPRAR, SE DARA ADVERTENCIA DE QUE SE BORRARA SU CARRITO.
-		SI NO COMPRA, TODOS LOS PRODUCTOS DE CARRITO VOLVERAN A CATALOGO (PROCESO SIMILAR A BUSCAR SI HAY PRODUCTOS EN CARRITO EN OPCION AGREGAR PRODUCTO).
-		*/
 		switch (menu){ // Operaciones para el MENU PRINCIPAL
 			case 1: // 1) Mostrar Catalogo
 				if(!empty(catalogo)){ // Verifica si el catalogo no esta vacio
@@ -715,7 +764,46 @@ do{// Comienza Menu Principal del Cliente
 				}while(submenu!=0); system("clear");
 			break;
 			case 0: // Mensaje al salir del programa
-				printf("\n!!! Hasta la proxima !!! Presione Enter para Continuar... "); getchar(); getchar(); system("clear"); exit(0);
+
+				// SE IMPRIME TICKET DE COMPRA EN CASO DE TENER PRODUCTOS EN CARRITO
+
+				if (!empty(cartClient)){ // Catalogo Tiene Productos  
+					j=0;
+					fileCatalogo = fopen("Ticket.txt","w+"); // Se abre archivo para escritura
+					if(fileCatalogo==NULL){
+						printf("\n!!! No se ha podido acceder al archivo Catalogo.txt !!!\n ");
+						exit(-1); 
+					}
+						fprintf(fileCatalogo,"################################ ESCOMMERCE ########################################\n\n");
+						fprintf(fileCatalogo,"----------------------------- Ticket de Compra -------------------------------------\n\n");
+
+					for(i=0;i<cartClient->NE;i++){ // Se imprimen los elementos de la lista "Catalogo de Productos Disponibles"
+						fprintf(fileCatalogo,"Producto : %sCantidad: %d\nPrecio Unitario : $%d\n\n",get(i,cartClient).name, get(i,cartClient).cant, get(i,cartClient).precio);
+						j = j+ (get(i,cartClient).precio * get(i,cartClient).cant);
+					}
+					fprintf(fileCatalogo,"----------------------------------------------------------------------------------------\n\n");
+					fprintf(fileCatalogo,"Total a Pagar = $%d\n",j);
+					fprintf(fileCatalogo,"                         !!!! Gracias Por Su Preferencia !!!!");
+
+					fclose(fileCatalogo);
+				}
+				// FIN TICKET DE COMPRA
+
+			if (!empty(catalogo)){ // Catalogo Tiene Productos  
+
+					fileCatalogo = fopen("Catalogo.txt","w+"); // Se abre archivo para escritura
+					if(fileCatalogo==NULL){
+						printf("\n!!! No se ha podido acceder al archivo Catalogo.txt !!!\n ");
+						exit(-1); 
+					}
+
+					for(i=0;i<catalogo->NE;i++){ // Se imprimen los elementos de la lista "Catalogo de Productos Disponibles"
+						fprintf(fileCatalogo,"%s%d\n%d\n",get(i,catalogo).name, get(i,catalogo).cant, get(i,catalogo).precio);
+					}
+					fclose(fileCatalogo);
+				}
+
+				printf("\n!!! Hasta la proxima !!! Presione Enter para Continuar... "); getchar(); getchar(); system("clear"); main();
 			break;
 
 			default: printf("\n!!! Ha insertado una opcion invalida !!! Presione Enter para Intentar de nuevo...\n"); getchar(); getchar(); system("clear");	
@@ -723,7 +811,35 @@ do{// Comienza Menu Principal del Cliente
 	}while(menu!=0);
 }
     
+/*------------------------------------------------------------------------------- PROVEEDOR ------------------------------------------------------------------------------------------
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------*/
+
+
 void menuProveedor(){
+// Se abre Fichero
+	fileCatalogo = fopen("Catalogo.txt","r+");
+	if(fileCatalogo==NULL){
+		printf("\n!!! No se ha podido acceder al archivo Catalogo.txt !!!\n ");
+		exit(-1); 
+	}
+
+	//Se precargan productos en la lista "Catalogo de Productos"
+    size_t len = 0;
+	pos=0;
+    while (getline(&contents, &len, fileCatalogo) != -1){
+        strcpy(auxList.name,contents);
+		getline(&contents, &len, fileCatalogo);
+		auxList.cant=atoi(contents);
+		getline(&contents, &len, fileCatalogo);
+		auxList.precio=atoi(contents);
+
+		add (pos,auxList,catalogo);
+		pos++;
+		//printf("%s", contents);
+
+    }
+	pos=0;
+	fclose(fileCatalogo);
 
 do{// Comienza Menu Principal del Proveedor
 		printf("\t*************** Proyecto Tienda Online ***************\n\n");
@@ -792,6 +908,7 @@ do{// Comienza Menu Principal del Proveedor
 										printf("\nIngrese el Nombre del Nuevo Producto y presione ENTER. (Max. 20 Caracteres) ~& ");
 										scanf("%20[^\n]s",auxString); //Se ingresa el nombre del Nuevo Producto
 										getchar();
+										strcat(auxString,"\n");
 
 										printf("\nIngrese la Cantidad del Nuevo Producto y presione ENTER. (1 - 999) ~& ");
 										scanf("%d",&j); //Se ingresa la cantidad del Nuevo Producto
@@ -868,6 +985,21 @@ do{// Comienza Menu Principal del Proveedor
 			break;
 			
 			case 0: // Mensaje al salir del programa
+
+			if (!empty(catalogo)){ // Catalogo Tiene Productos  
+
+					fileCatalogo = fopen("Catalogo.txt","w+"); // Se abre archivo para escritura
+					if(fileCatalogo==NULL){
+						printf("\n!!! No se ha podido acceder al archivo Catalogo.txt !!!\n ");
+						exit(-1); 
+					}
+
+					for(i=0;i<catalogo->NE;i++){ // Se imprimen los elementos de la lista "Catalogo de Productos Disponibles"
+						fprintf(fileCatalogo,"%s%d\n%d\n",get(i,catalogo).name, get(i,catalogo).cant, get(i,catalogo).precio);
+					}
+				fclose(fileCatalogo);
+				}
+
 				printf("\n!!! Hasta la proxima !!! Presione Enter para Continuar... "); getchar(); getchar(); system("clear"); main();
 			break;
 
