@@ -22,8 +22,9 @@ void menuProveedor();
 lista catalogo,cartClient;
 carrito auxList;
 unsigned int server,menu,submenu,pos,i,j,n,fd,condicional,totalClient,auxCant,passAdmin,passProveedor;
-char auxString[21];
+char auxString[21], *contents = NULL;
 unsigned status;
+FILE* fileCatalogo;
 
 int main(void)
 {
@@ -110,31 +111,31 @@ int main(void)
 
     //Se crean las listas a utilizar
 	crearlista(&catalogo); // Catalogo de Productos de la Tienda
-	
+	// Se abre Fichero
+	fileCatalogo = fopen("Catalogo.txt","r+");
+	if(fileCatalogo==NULL){
+		printf("\n!!! No se ha podido acceder al archivo Catalogo.txt !!!\n ");
+		exit(-1); 
+	}
+
 	//Se precargan productos en la lista "Catalogo de Productos"
-	strcpy(auxList.name,"Cuaderno");
-	auxList.cant=3;
-	auxList.precio=10;
-	add(0,auxList,catalogo); 
+    size_t len = 0;
+	pos=0;
+    while (getline(&contents, &len, fileCatalogo) != -1){
+        strcpy(auxList.name,contents);
+		getline(&contents, &len, fileCatalogo);
+		auxList.cant=atoi(contents);
+		getline(&contents, &len, fileCatalogo);
+		auxList.precio=atoi(contents);
 
-	strcpy(auxList.name,"Boligrafo");
-	auxList.cant=3;
-	auxList.precio=5;
-	add(1,auxList,catalogo);
-	
-	strcpy(auxList.name,"Libro");
-	auxList.cant=3;
-	auxList.precio=20;
-	add(2,auxList,catalogo);
-	
-	strcpy(auxList.name,"Mochila");
-	auxList.cant=3;
-	auxList.precio=10;
-	add(3,auxList,catalogo);
+		add (pos,auxList,catalogo);
+		pos++;
+		//printf("%s", contents);
 
-	// Se inicializan Contraseñas por default
-	passAdmin = 100000;
-	passProveedor = 100000;
+    }
+	pos=0;
+	fclose(fileCatalogo);
+	
 
 	do{ // Inicia SERVIDOR
 		system("clear");
@@ -235,7 +236,22 @@ int main(void)
             }
             break;
 			case 0:
+				
+				if (!empty(catalogo)){ // Carrito Tiene Productos  
+
+					fileCatalogo = fopen("Catalogo.txt","w+"); // Se abre archivo para escritura
+					if(fileCatalogo==NULL){
+						printf("\n!!! No se ha podido acceder al archivo Catalogo.txt !!!\n ");
+						exit(-1); 
+					}
+
+					for(i=0;i<catalogo->NE;i++){ // Se imprimen los elementos de la lista "Catalogo de Productos Disponibles"
+						fprintf(fileCatalogo,"%s%d\n%d\n",get(i,catalogo).name, get(i,catalogo).cant, get(i,catalogo).precio);
+					}
+				}
 				printf("!!! Gracias por Utilizar Escommerce !!! Hasta la Proxima \n\n");
+				free(contents);
+
 			break;
 		
 			default:

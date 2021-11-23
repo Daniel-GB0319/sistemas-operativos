@@ -1,0 +1,9 @@
+Cuaderno
+3
+12
+Libro
+5
+15
+Boligrafo
+5
+3
