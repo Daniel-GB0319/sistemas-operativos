@@ -1,5 +1,5 @@
 #include <stdio.h>
-#include "../include/systemv.h"
+#include "./include/systemv.h"
 
 int main(void)
 {
