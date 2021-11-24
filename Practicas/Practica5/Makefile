@@ -7,7 +7,7 @@
 # `make uninstall` - Desinstala el ejecutable de /usr/local/bin
 
 # El nombre del ejecutable
-TARGET=Practica81.out 
+TARGET=Practica5.out 
 
 # El directorio dónde se encuentra el código fuente
 SRC=.
