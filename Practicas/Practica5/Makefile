@@ -38,4 +38,4 @@ install: $(TARGET)
 
 # Elimina el binario de /usr/local/bin
 uninstall:
-	rm -f /usr/lcoal/bin/$(TARGET)
+	rm -f /usr/local/bin/$(TARGET)

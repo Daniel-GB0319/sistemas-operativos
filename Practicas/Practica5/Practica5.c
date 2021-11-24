@@ -1,11 +1,10 @@
-#include <stdio.h>    // Para operaciones estándar de entrada y salida.
-#include <stdlib.h>   // Para utilizar funciones estándar de C.
-#include <sys/stat.h> // Para la verificación de directorios y archivos.
-#include <ncurses.h>  // Para controlar el aspecto gráfico dentro de la terminal.
-#include <string.h>   // Para realizar operaciones con cadenas de caracteres.
-#include <locale.h>   // Para poder mostrar acentos y caracteres especiales en la terminal.
+#include <stdio.h>  
+#include <stdlib.h>   
+#include <sys/stat.h> 
+#include <ncurses.h>  
+#include <string.h>   
+#include <locale.h>   
 
-// Constantes de operación.
 #define LECTURA_ARCHIVO_OK 0
 #define LECTURA_ARCHIVO_PARAMETROS_INVALIDOS -1
 #define LECTURA_ARCHIVO_ERROR -2
