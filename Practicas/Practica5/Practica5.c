@@ -5,401 +5,374 @@
 #include <string.h>   
 #include <locale.h>   
 
-#define LECTURA_ARCHIVO_OK 0
-#define LECTURA_ARCHIVO_PARAMETROS_INVALIDOS -1
-#define LECTURA_ARCHIVO_ERROR -2
-#define LECTURA_ARCHIVO_MUY_GRANDE -3
-#define LECTURA_ARCHIVO_SIN_MEMORIA -4
-#define LECTURA_ARCHIVO_TAM_BLOQUE 2097152 // El tamaño de lectura de cada "bloque" de información del archivo 2MiB.
-#define TAMANIO_INICIAL 2                  // El tamaño inicial del archivo si es un archivo nuevo.
+#define BLOCK_SIZE 2097152 // Tamaño de lectura por bloque de info aprox. 2 MB.  
 #define CARACTER_VACIO ' '                 // Cuando la pantalla no debe mostrar nada
 #define CARACTER_DE_CONTROL ' '            // Cuando existe un caracter de control (\0 o \n), para debuggear más fácil qué está sucediendo.
 
 // Prototipos de funciones.
-int leer_archivo_en_buffer(char *, char **, size_t *);                        // Función para leer un archivo y guardarlo en un búffer.
-int existe_archivo(char *);                                                   // Función para determinar si existe un archivo.
-void editor_de_texto(char *, char **, size_t *, int, int);                    // Función que encapsula la operación del editor.
-void calcular_pantalla(int **, int, int, int, int, char **, size_t);          // Función que calcula los contenidos de la pantalla en cada interacción del usuario.
-void mostrar_pantalla(int, int, char **, int, int, int **);                   // Función que muestra la pantalla calculada
-void mostrar_estadisticas(char *, char **, size_t, int, int, int, int);       // Función que muestra estadísticas en la barra de menú.
-void tecla_abajo(int, int **, int *, int *, char **, int *);                  // Función para encapsular la lógica de presionar la tecla "Flecha Abajo"
-void tecla_arriba(int, int **, int *, int *, char **, int *);                 // Función para encapsular la lógica de presionar la tecla "Flecha Arriba"
-void tecla_izquierda(int *, int *);                                           // Función para encapsular la lógica de presionar la tecla "Flecha Izquierda"
-void tecla_derecha(int *, int *, int, size_t, char **);                       // Función para encapsular la lógica de presionar la tecla "Flecha Derecha"
-void tecla_borrar(int *, int *, char **, size_t *, int *, int **);            // Función para encapsular la lógica de presionar la tecla "Borrar"
-void tecla_esc(char *, char **, size_t);                                      // Función para encapsular la lógica de presionar la tecla "ESC" (salir)
-void tecla_cualquiera(char **, size_t *, int, int *, int *, int, int *, int); // Función para encapsular la lógica de presionar cualquier otra tecla.
+int saveFileInBuffer(char *, char **, size_t *);                        // Lee fileFichero y guarda en buffer.
+int checkFileExists(char *);                                            // Verifica si fileFichero existe.
+void textEditor(char *, char **, size_t *, int, int);                   // Realiza operaciones del editor.
+void calcContentsScreen(int **, int, int, int, int, char **, size_t);   // Analiza los contenidos de la pantalla en cada interaccion.
+void showScreen(int, int, char **, int, int, int **);                   // Muestra la pantalla
+void showStatistics(char *, char **, size_t, int, int, int, int);       // Muestra informacion en la barra superior
+void downKey(int, int **, int *, int *, char **, int *);                // Mueve cursor hacia abajo
+void upKey(int, int **, int *, int *, char **, int *);                  // Mueve cursor hacia arriba
+void leftKey(int *, int *);                                             // Mueve cursor hacia la izquierda
+void rightKey(int *, int *, int, size_t, char **);                      // Mueve cursor hacia la derecha
+void delKey(int *, int *, char **, size_t *, int *, int **);            // Realiza borrado de texto al presionar tecla Retroceso
+void escKey(char *, char **, size_t);                                   // Salir de programa con tecla Esc
+void anyKey(char **, size_t *, int, int *, int *, int, int *, int);     // Inserta cualquier caracter disponible en teclado
 
 int main(int argc, char *argv[]){
-  char *buffer, *nombre_archivo;         
-  int resultado_lectura_archivo, filas_maximas, columnas_maximas, archivo_existente;      
-  size_t tamanio_buffer;        
+  char *buffer, *fileName;         
+  int readFileResult, maxRows, maxCols, fileExist;      
+  size_t bufferSize;        
 
-  // Verificamos si obtuvimos el nombre del archivo como parámetro del programa.
-  if (argc == 2){
-    nombre_archivo = argv[1]; // Asumimos que el segundo parámetro es el nombre del archivo.
-  }else{ // Mostramos la información de uso del programa al usuario.
-    printf("USO:\n");
-    printf("\t%s /ruta/al/archivo/para/editar.txt\n\n", argv[0]);
+  // Verifica si se Ingreso nombre del fileFichero como parametro.
+  if (argc == 2){ // Se ingreso nombre de fileFichero como parametro
+    fileName = argv[1];
+  }else{ // No se ingreso nombre de fileFichero como parametro
+    printf("Para editar un fileFichero, ingrese el siguiente comando:\n");
+    printf("%s /ruta_completa/fileFichero.txt\n\no intente con ruta relativa:\n\n", argv[0]);
+    printf("%s ./fileFichero.txt\n\n", argv[0]);
     return 0;
   }
 
-  archivo_existente = existe_archivo(nombre_archivo); // Verificamos que el archivo exista.
+  fileExist = checkFileExists(fileName); // Verifica que fileFichero exista.
 
-  if (archivo_existente){ // Si el archivo existe leemos su contenido.
-    printf("Leyendo '%s' ...\n", nombre_archivo);
+  if (fileExist){ // Se lee contenido de fileFichero si este existe
+    printf("Abriendo '%s' ...\n", fileName);
 
-    // Leemos el archivo en el búffer.
-    resultado_lectura_archivo = leer_archivo_en_buffer(nombre_archivo, &buffer, &tamanio_buffer);
+    readFileResult = saveFileInBuffer(fileName, &buffer, &bufferSize); // Lee fileFichero y guarda en buffer
 
-    // Verificamos la lectura del archivo.
-    switch (resultado_lectura_archivo){
-    case LECTURA_ARCHIVO_OK:
-      printf("¡Archivo leído correctamente!\n%s\n", buffer); break;
+    // Elije posibles casos de lectura de fileFichero
+    switch (readFileResult){
+    case 0: // Lectura Correcta
+      printf("¡Archivo leido con exito!\n%s\n", buffer); break;
       
-    case LECTURA_ARCHIVO_PARAMETROS_INVALIDOS:
-      printf("El archivo no existe o está dañado, revísalo e intenta más tarde.\n"); return -1;
+    case -1: // Parametros Invalidos
+      printf("El Archivo no existe o esta dañado.\n"); return -1;
     
-    case LECTURA_ARCHIVO_ERROR:
-      printf("Ocurrió un error leyendo el archivo, inténtalo más tarde.\n"); return -1;
+    case -2: // Error de Lectura
+      printf("Ocurrio un error de lectura, intente de nuevo.\n"); return -1;
       
-    case LECTURA_ARCHIVO_MUY_GRANDE:
-      printf("El archivo es demasiado grande, intenta con un archivo más pequeño.\n"); return -1;
+    case -3: // fileFichero muy grande
+      printf("Archivo demasiado grande, intente con otro fileFichero.\n"); return -1;
       
-    case LECTURA_ARCHIVO_SIN_MEMORIA:
-      printf("El programa no cuenta con memoria suficiente para leer el archivo, intenta más tarde.\n"); return -1;
+    case -4: // Memoria insuficiente
+      printf("Programa con memoria insuficiente para leer el fileFichero, intente de nuevo.\n"); return -1;
     }
-  }else{ // Si el archivo no existe, inicializamos el búffer en un tamaño predefinido.
-    buffer = malloc(sizeof(char) * TAMANIO_INICIAL);
-    tamanio_buffer = TAMANIO_INICIAL;
+  }else{ // fileFichero no existe
+    buffer = malloc(sizeof(char) * 2); // Se inicia el buffer en un tamaño predefinido.
+    bufferSize = 2;
     buffer[0] = EOF;
   }
 
-  // Inicialización de nuestro ambiente de texto gráfico.
-  setlocale(LC_ALL, "es_MX");                        // Colocamos la localización en español México.
-  initscr();                                         // Iniciamos el modo gráfico.
-  cbreak();                                          // Queremos capturar _todas_ las teclas que presione el usuario (esto incluye Control + C ¡aguas!)
-  keypad(stdscr, TRUE);                              // Activamos el modo "keypad" para poder utilizar flechas del teclado y demás monerías.
-  noecho();                                          // No queremos que las teclas que presione el usuario se impriman.
-  getmaxyx(stdscr, filas_maximas, columnas_maximas); // Obtenemos las dimensiones de nuestra ventana.
+  // Inicializacion de ambiente grafico.
+  setlocale(LC_ALL, "es_MX");                       
+  initscr();                                        
+  cbreak();                                          
+  keypad(stdscr, TRUE);                              
+  noecho();                                          
+  getmaxyx(stdscr, maxRows, maxCols); // Obtiene dimensiones de ventana.
+  textEditor(fileName, &buffer, &bufferSize, maxRows, maxCols); // Se ejecuta el editor de texto.
 
-  // Ejecutamos el editor principal.
-  editor_de_texto(nombre_archivo, &buffer, &tamanio_buffer, filas_maximas, columnas_maximas);
-
-  // Finalización del programa.
-  clear();  // Limpiar la ventana.
-  endwin(); // Finalizamos la ventana.
+  // Finaliza programa.
+  clear();  
+  endwin(); 
   free(buffer);
   return 0;
 }
 
-int leer_archivo_en_buffer(char *nombre_archivo, char **buffer_final, size_t *tamanio){
+/*######################################################### FUNCIONES ############################################################################################*/
+
+int saveFileInBuffer(char *fileName, char **finalBuffer, size_t *auxSize){
   char *buffer = NULL,
-       *temporal;
+       *temp;
   size_t tam = 0,
          usado = 0,
          n;
-  FILE *archivo;
+  FILE *fileFichero;
 
-  archivo = fopen(nombre_archivo, "rb");
+  fileFichero = fopen(fileName, "rb");
 
-  // Validación de parámetros
-  if (archivo == NULL || buffer_final == NULL || tamanio == NULL){ // Parámetros proporcionados son inválido.
-    return LECTURA_ARCHIVO_PARAMETROS_INVALIDOS;
+  if (fileFichero == NULL || finalBuffer == NULL || auxSize == NULL){ // Valida parametros
+    return -1; // Parametros invalidos.
   }
 
-  // Verificamos que no haya errores de lectura previos.
-  if (ferror(archivo)){
-    return LECTURA_ARCHIVO_ERROR;
+  if (ferror(fileFichero)){ // Verifica inexistencia de errores de lectura.
+    return -2; // Error de Lectura
   }
 
-  // Ciclo principal de lectura.
-  while (1){
-    // Verificamos si llegamos al límite de lectura por "bloque".
-    if ((usado + LECTURA_ARCHIVO_TAM_BLOQUE + 1) > tam){
-      // Ajustamos el tamaño apropiadamente (siempre considerando EOF)
-      tam = usado + LECTURA_ARCHIVO_TAM_BLOQUE + 1;
+  while (1){ // Bucle de lectura.
+    if ((usado + BLOCK_SIZE + 1) > tam){ // Verifica si se llego al límite de lectura por bloque.
+      // Se ajusta tamaño considerando EOF
+      tam = usado + BLOCK_SIZE + 1;
 
-      // Checamos que no se desborden las variables, existen compiladores que optimizan esto automágicamente.
-      if (tam <= usado){
+      if (tam <= usado){// Verifica que variables no se desborden
         free(buffer);
-        // Regresamos el error de que el archivo es más grande de lo que disponemos de memoria.
-        return LECTURA_ARCHIVO_MUY_GRANDE;
+        return -3; // Archivo muy grande
       }
+      temp = realloc(buffer, tam); // Mueve memoria de buffer a temp.
 
-      temporal = realloc(buffer, tam); // Movemos la memoria desde nuestro buffer a la variable temporal.
-
-      // Verificamos que aún tengamos memoria de "heap" disponible.
-      if (temporal == NULL){
-        free(buffer); // Regresamos el error de que nos quedamos sin memoria de "heap" suficiente.
-        return LECTURA_ARCHIVO_SIN_MEMORIA;
+      // Verifica que aun exista memoria disponible.
+      if (temp == NULL){
+        free(buffer);
+        return -4; // Memoria Insuficiente
       }
-      buffer = temporal; // Asiganmos de vuelta el búffer.
+      buffer = temp; // Se vuelve a asignar memoria de temp a buffer.
     }
 
-    // Usamos la variable temporal para medir la cantidad de datos que fueron leídos por la función.
-    n = fread(buffer + usado, 1, LECTURA_ARCHIVO_TAM_BLOQUE, archivo);
+    // Se mide la cantidad de datos leídos por la funcion.
+    n = fread(buffer + usado, 1, BLOCK_SIZE, fileFichero);
 
-    if (n == 0){// Verificamos si terminamos de leer el archivo.
+    if (n == 0){// Verifica si finalizo lectura de archivo.
       break;
     }
-    usado += n; // Aumentamos el contador de memoria utilizada.
+    usado += n; // Aumenta contador de memoria utilizada.
   }
 
-  if (ferror(archivo)){// Verificamos que no haya existido un error de lectura.
+  if (ferror(fileFichero)){// Verifica inexistencia de error de lectura.
     free(buffer);
-    return LECTURA_ARCHIVO_ERROR; // Regresamos el error.
+    return -2; // Error de Lectura.
   }
+  buffer = temp;
+  temp = realloc(buffer, tam);
 
-  buffer = temporal; // Asignamos los datos leídos desde el buffer temporal.
-
-  temporal = realloc(buffer, tam); // Movemos la memoria desde nuestro buffer a la variable temporal.
-
-  if (temporal == NULL){ // Verificamos que aún tengamos memoria de "heap" disponible.
+  if (temp == NULL){ // Verifica que exista memoria disponible.
     free(buffer);
-    return LECTURA_ARCHIVO_SIN_MEMORIA; // Regresamos el error de que nos quedamos sin memoria de "heap" suficiente.
+    return -4; // Memoria Insuficiente
   }
+  buffer = temp;
+  buffer[tam] = '\0'; // Asigna EOF.
+  fclose(fileFichero);
 
-  buffer = temporal;// Asiganmos de vuelta el búffer.
-  buffer[tam] = '\0'; // Asignamos el EOF.
-  fclose(archivo);
-
-  // Asignamos los datos leídos a los apuntadores de resultados.
-  *buffer_final = buffer;
-  *tamanio = usado;
-
-  return LECTURA_ARCHIVO_OK; // Regresamos la bandera de éxito.
+  // Asigna datos leídos a los apuntadores de resultados.
+  *finalBuffer = buffer;
+  *auxSize = usado;
+  return 0; // Lectura Exitosa
 }
 
-int existe_archivo(char *nombre_archivo){
-  struct stat buffer; // Búffer para almacenar el resultado de stat().
-  return (stat(nombre_archivo, &buffer) == 0); // Regresamos el valor de stat().
+int checkFileExists(char *fileName){
+  struct stat buffer; // Almacena resultado de funcion stat()
+  return (stat(fileName, &buffer) == 0);
 }
 
-void editor_de_texto(char *nombre_archivo, char **buffer, size_t *tamanio_buffer, int filas_maximas, int columnas_maximas){
-  int tecla_presionada, pos_x, pos_y, pos_buffer, fila_actual, **pantalla;
+void textEditor(char *fileName, char **buffer, size_t *bufferSize, int maxRows, int maxCols){
+  int pressedKey, pos_x, pos_y, pos_buffer, actualRow, **pantalla;
 
-  pantalla = (int **)malloc((filas_maximas - 1) * sizeof(int *)); // Creamos "filas_maximas - 1" filas (la primer fila es para estadísticas) en nuestra pantalla.
+  pantalla = (int **)malloc((maxRows - 1) * sizeof(int *)); // Se crean n-1 filas en pantalla (reservado para barra)
 
-  // Iteramos sobre cada fila de la pantalla.
-  for (fila_actual = 0; fila_actual < (filas_maximas - 1); fila_actual++){
-    // Generamos el arreglo de "columnas_maximas" columnas para cada fila.
-    pantalla[fila_actual] = (int *)malloc(columnas_maximas * sizeof(int));
+  for (actualRow = 0; actualRow < (maxRows - 1); actualRow++){ // Recorre cada fila de pantalla
+    pantalla[actualRow] = (int *)malloc(maxCols * sizeof(int)); // Genera columnas para cada fila
   }
 
-  // Colocamos la posición inicial del cursor y de la posición en el búffer.
+  // Inicializa posicion de cursor y buffer
   pos_x = 0;
   pos_y = 0;
   pos_buffer = 0;
 
-  do{ // Ciclo principal de ejecución.
-    // Calculamos la pantalla actual a partir de la posición del búffer y coordenadas de cursor actuales.
-    calcular_pantalla(pantalla, filas_maximas, columnas_maximas, pos_y, pos_buffer, buffer, *tamanio_buffer);
+  do{ // Bucle de ejecucion.
+    calcContentsScreen(pantalla, maxRows, maxCols, pos_y, pos_buffer, buffer, *bufferSize); // Calcula contenido de pantalla a partir de posicion de buffer y cursor actuales.
+    showScreen(pos_x, pos_y, buffer, maxRows, maxCols, pantalla); // Muestra contenido del archivo en pantalla.
+    showStatistics(fileName, buffer, *bufferSize, pos_x, pos_y, pos_buffer, maxCols); // Muestra coordenadas y posicion de buffer
+    pressedKey = getch();// Lee tecla presionada por usuario.
 
-    mostrar_pantalla(pos_x, pos_y, buffer, filas_maximas, columnas_maximas, pantalla); // Mostrar el contenido del archivo corresopndiente a la ventana.
-
-    mostrar_estadisticas(nombre_archivo, buffer, *tamanio_buffer, pos_x, pos_y, pos_buffer, columnas_maximas); // Mostramos las coordenadas y posición en el búffer
-
-    tecla_presionada = getch();// Leemos la tecla que presiona el usuario.
-
-    switch (tecla_presionada){ // Si la tecla no es ESC, editamos el búffer apropiadamente.
-    case 27:
-      tecla_esc(nombre_archivo, buffer, *tamanio_buffer); break;
+    switch (pressedKey){
+    case 27: // Presiona Esc
+      escKey(fileName, buffer, *bufferSize); break;
 
     case KEY_UP:
-      tecla_arriba(columnas_maximas, pantalla, &pos_y, &pos_x, buffer, &pos_buffer); break;
+      upKey(maxCols, pantalla, &pos_y, &pos_x, buffer, &pos_buffer); break;
 
     case KEY_DOWN:
-      tecla_abajo(filas_maximas, pantalla, &pos_y, &pos_x, buffer, &pos_buffer); break;
+      downKey(maxRows, pantalla, &pos_y, &pos_x, buffer, &pos_buffer); break;
 
     case KEY_LEFT:
-      tecla_izquierda(&pos_x, &pos_buffer); break;
+      leftKey(&pos_x, &pos_buffer); break;
 
     case KEY_RIGHT:
-      tecla_derecha(&pos_x, &pos_buffer, columnas_maximas, (*tamanio_buffer), buffer); break;
+      rightKey(&pos_x, &pos_buffer, maxCols, (*bufferSize), buffer); break;
 
-    case 127:
-      tecla_borrar(&pos_x, &pos_y, buffer, tamanio_buffer, &pos_buffer, pantalla); break;
+    case 127: // Presiona Backspace
+      delKey(&pos_x, &pos_y, buffer, bufferSize, &pos_buffer, pantalla); break;
 
     default:
-      tecla_cualquiera(buffer, tamanio_buffer, tecla_presionada, &pos_buffer, &pos_x, columnas_maximas, &pos_y, filas_maximas);
+      anyKey(buffer, bufferSize, pressedKey, &pos_buffer, &pos_x, maxCols, &pos_y, maxRows);
       break;
     }
-  } while (tecla_presionada != 27); // Mientras el usuario no presiones ESC.
+  } while (pressedKey != 27);
   free(pantalla);
 }
 
-void calcular_pantalla(int **pantalla, int filas_maximas, int columnas_maximas, int pos_y, int pos_buffer, char **buffer, size_t tamanio_buffer){
-  int pos_buffer_temporal,
-      pos_x_temporal,
-      pos_y_temporal,
-      lineas_antes;
+void calcContentsScreen(int **pantalla, int maxRows, int maxCols, int pos_y, int pos_buffer, char **buffer, size_t bufferSize){
+  int pos_buffer_temp,
+      pos_x_temp,
+      pos_y_temp,
+      oldLines;
 
-  // Llenamos la pantalla de -1's.
-  for (pos_y_temporal = 0; pos_y_temporal < (filas_maximas - 1); pos_y_temporal++){
-    for (pos_x_temporal = 0; pos_x_temporal < columnas_maximas; pos_x_temporal++){
-      pantalla[pos_y_temporal][pos_x_temporal] = -1;
+  for (pos_y_temp = 0; pos_y_temp < (maxRows - 1); pos_y_temp++){
+    for (pos_x_temp = 0; pos_x_temp < maxCols; pos_x_temp++){
+      pantalla[pos_y_temp][pos_x_temp] = -1;
     }
   }
 
-  // Calculamos el número de líneas previas a la posición actual en el búffer mientras reducimos dicha posición.
-  for (pos_buffer_temporal = pos_buffer - 1, lineas_antes = 0; pos_buffer_temporal > 0 && lineas_antes < pos_y; pos_buffer_temporal--){
-    if ((*buffer)[pos_buffer_temporal] == '\n'){
-      lineas_antes += 1;
+  // Calcula numero de líneas previas a la posicion actual en el buffer mientras reduce esa posicion.
+  for (pos_buffer_temp = pos_buffer - 1, oldLines = 0; pos_buffer_temp > 0 && oldLines < pos_y; pos_buffer_temp--){
+    if ((*buffer)[pos_buffer_temp] == '\n'){
+      oldLines += 1;
     }
   }
 
-  if (pos_buffer_temporal == -1){
-    pos_buffer_temporal = 0;
+  if (pos_buffer_temp == -1){
+    pos_buffer_temp = 0;
   }
 
-  // Reducimos la posición del búffer para encontrar el principio de la línea inicial.
-  while (pos_buffer_temporal > 0 && (*buffer)[pos_buffer_temporal - 1] != '\n'){
-    pos_buffer_temporal--;
+  // Reduce posicion de buffer para encontrar el principio de la linea inicial.
+  while (pos_buffer_temp > 0 && (*buffer)[pos_buffer_temp - 1] != '\n'){
+    pos_buffer_temp--;
   }
 
-  // Iteramos sobre cada fila de la pantalla hasta encontrar el fin del búffer.
-  for (pos_y_temporal = 0; pos_y_temporal < (filas_maximas - 1) && pos_buffer_temporal < ((int)(tamanio_buffer)) && (*buffer)[pos_buffer_temporal] != '\0'; pos_y_temporal++, pos_buffer_temporal++){
-    // Iteramos sobre cada columna y caracter del búffer.
-    for (pos_x_temporal = 0; pos_x_temporal < columnas_maximas && pos_buffer_temporal < ((int)(tamanio_buffer)) && (*buffer)[pos_buffer_temporal] != '\n' && (*buffer)[pos_buffer_temporal] != '\0'; pos_x_temporal++, pos_buffer_temporal++){
-      // Asignamos el valor presente en el búffer.
-      pantalla[pos_y_temporal][pos_x_temporal] = pos_buffer_temporal;
+  // Recorre cada fila de la pantalla hasta encontrar el fin del buffer.
+  for (pos_y_temp = 0; pos_y_temp < (maxRows - 1) && pos_buffer_temp < ((int)(bufferSize)) && (*buffer)[pos_buffer_temp] != '\0'; pos_y_temp++, pos_buffer_temp++){
+    // Recorre cada columna y caracter del buffer.
+    for (pos_x_temp = 0; pos_x_temp < maxCols && pos_buffer_temp < ((int)(bufferSize)) && (*buffer)[pos_buffer_temp] != '\n' && (*buffer)[pos_buffer_temp] != '\0'; pos_x_temp++, pos_buffer_temp++){
+      // Asigna valor presente en el buffer.
+      pantalla[pos_y_temp][pos_x_temp] = pos_buffer_temp;
     }
 
-    // Verificamos si nuestro último caracter fue un salto de línea o EOL y en caso contrario sólamente recorremos hasta encontrarlo.
-    if ((*buffer)[pos_buffer_temporal] != '\n' && (*buffer)[pos_buffer_temporal] != '\0'){
-      while (pos_buffer_temporal < ((int)(tamanio_buffer)) && (*buffer)[pos_buffer_temporal] != '\n' && (*buffer)[pos_buffer_temporal] != '\0'){
-        pos_buffer_temporal++;
+    // Verifica si ultimo caracter ingresado fue salto de línea o EOL
+    if ((*buffer)[pos_buffer_temp] != '\n' && (*buffer)[pos_buffer_temp] != '\0'){
+      while (pos_buffer_temp < ((int)(bufferSize)) && (*buffer)[pos_buffer_temp] != '\n' && (*buffer)[pos_buffer_temp] != '\0'){
+        pos_buffer_temp++;
       }
     }
-    pantalla[pos_y_temporal][pos_x_temporal] = pos_buffer_temporal; // Asignamos el último caracter encontrado a nuestra posición.
+    pantalla[pos_y_temp][pos_x_temp] = pos_buffer_temp; // Asigna ultimo caracter ingresado en posicion actual
   }
 }
 
-void tecla_abajo(int filas_maximas, int **pantalla, int *pos_y, int *pos_x, char **buffer, int *pos_buffer)
+void downKey(int maxRows, int **pantalla, int *pos_y, int *pos_x, char **buffer, int *pos_buffer)
 {
-  int pos_x_temporal,
-      pos_y_temporal,
-      pos_buffer_temporal;
+  int pos_x_temp,
+      pos_y_temp,
+      pos_buffer_temp;
 
-  // Primero verificamos si aún hay filas presentes en la pantalla por debajo de la posición actual.
-  if ((*pos_y) < (filas_maximas - 2)){
-    // Aumentamos nuestra posición en y.
-    pos_y_temporal = (*pos_y) + 1;
-    pos_x_temporal = (*pos_x);
+  // Verifica si aUn hay filas en la pantalla por debajo de posición actual.
+  if ((*pos_y) < (maxRows - 2)){
+    // Aumenta posicion y
+    pos_y_temp = (*pos_y) + 1;
+    pos_x_temp = (*pos_x);
 
-    // Verificamos que no sea un espacio vacío.
-    if (pantalla[pos_y_temporal][pos_x_temporal] == -1){
-      // Si es un espacio vacío (en x) reducimos la coordenada hasta encontrar un texto.
-      while (pantalla[pos_y_temporal][pos_x_temporal] == -1 && pos_x_temporal){
-        pos_x_temporal--;
+    // Verifica que no sea un espacio vacio.
+    if (pantalla[pos_y_temp][pos_x_temp] == -1){
+      // Si es un espacio vacio en x, se reduce la coordenada hasta encontrar texto.
+      while (pantalla[pos_y_temp][pos_x_temp] == -1 && pos_x_temp){
+        pos_x_temp--;
       }
 
-      // Si la coordenada en la posición encontrada contiene texto, asignamos la posición en el búffer
-      // en otro caso descartamos la operación.
-      if (pantalla[pos_y_temporal][pos_x_temporal] != -1){
-        (*pos_buffer) = pantalla[pos_y_temporal][pos_x_temporal];
-        (*pos_y) = pos_y_temporal;
-        (*pos_x) = pos_x_temporal;
+      // Si coordenada contiene texto, se asigna la posicion en buffer
+      if (pantalla[pos_y_temp][pos_x_temp] != -1){
+        (*pos_buffer) = pantalla[pos_y_temp][pos_x_temp];
+        (*pos_y) = pos_y_temp;
+        (*pos_x) = pos_x_temp;
       }
-    }else{ // Si no es un espacio vacío, asignamos directamente.
-      (*pos_buffer) = pantalla[pos_y_temporal][pos_x_temporal];
-      (*pos_y) = pos_y_temporal;
-      (*pos_x) = pos_x_temporal;
+    }else{ // Si no es un espacio vacio, asigna directamente.
+      (*pos_buffer) = pantalla[pos_y_temp][pos_x_temp];
+      (*pos_y) = pos_y_temp;
+      (*pos_x) = pos_x_temp;
     }
-  }else{
-    // En caso de que no haya filas presentes en la pantalla por debajo de la posición actual, debemos verificar que contemos, entonces,
-    // con una siguiente línea en el búffer.
-    for (pos_buffer_temporal = (*pos_buffer); (*buffer)[pos_buffer_temporal] != '\n' && (*buffer)[pos_buffer_temporal] != '\0'; pos_buffer_temporal++)
+  }else{ // No haya filas presentes en la pantalla por debajo de posición actual
+    // Verifica que se tenga una siguiente linea en buffer.
+    for (pos_buffer_temp = (*pos_buffer); (*buffer)[pos_buffer_temp] != '\n' && (*buffer)[pos_buffer_temp] != '\0'; pos_buffer_temp++)
       ;
 
-    // Si el caracter encontrado NO es un EOL (es un \n), entonces procedemos con otras verificaciones.
-    if ((*buffer)[pos_buffer_temporal] == '\n'){
-      pos_buffer_temporal++; // Aumentamos la posición del búffer temporal a la siguiente línea.
+    // Verifica que caracter encontrado NO es un EOL (\n)
+    if ((*buffer)[pos_buffer_temp] == '\n'){
+      pos_buffer_temp++; // Aumenta posicion de buffer temp a la siguiente linea.
 
-      // Lo primero será calcular la posición de x en la línea más cercana a la posición actual.
-      for (pos_x_temporal = 0; pos_x_temporal < (*pos_x) && (*buffer)[pos_buffer_temporal + pos_x_temporal] != '\n' && (*buffer)[pos_buffer_temporal + pos_x_temporal] != '\0'; pos_x_temporal++)
+      // Calcula posicion de x en linea mas cercana a posicion actual.
+      for (pos_x_temp = 0; pos_x_temp < (*pos_x) && (*buffer)[pos_buffer_temp + pos_x_temp] != '\n' && (*buffer)[pos_buffer_temp + pos_x_temp] != '\0'; pos_x_temp++)
         ;
 
-      // Asignamos la posición en x encontrada a nuestra variable.
-      (*pos_x) = pos_x_temporal;
-      (*pos_buffer) = pos_buffer_temporal;
+      // Asigna la posicion en x encontrada a variable.
+      (*pos_x) = pos_x_temp;
+      (*pos_buffer) = pos_buffer_temp;
     }
   }
 }
 
-void tecla_arriba(int columnas_maximas, int **pantalla, int *pos_y, int *pos_x, char **buffer, int *pos_buffer){
-  int pos_y_temporal = (*pos_y),
-      pos_x_temporal = (*pos_x),
-      pos_buffer_temporal = (*pos_buffer);
+void upKey(int maxCols, int **pantalla, int *pos_y, int *pos_x, char **buffer, int *pos_buffer){
+  int pos_y_temp = (*pos_y),
+      pos_x_temp = (*pos_x),
+      pos_buffer_temp = (*pos_buffer);
 
-  // Verificamos si aún disponemos de líneas disponibles en pantalla.
-  if (pos_y_temporal){
-    pos_y_temporal--; // Reducimos nuestra posición en y.
+  // Verifica si aun hay lineas disponibles en pantalla.
+  if (pos_y_temp){
+    pos_y_temp--; // Reduce posicion en y.
 
-    // Verificamos que no sea un espacio vacío.
-    if (pantalla[pos_y_temporal][pos_x_temporal] == -1){
-      // Si es un espacio vacío (en x) reducimos la coordenada hasta encontrar un texto.
-      while (pantalla[pos_y_temporal][pos_x_temporal] == -1 && pos_x_temporal){
-        pos_x_temporal--;
+    // Verifica que no sea un espacio vacio.
+    if (pantalla[pos_y_temp][pos_x_temp] == -1){
+      // Si es espacio vacío en x, se reduce la coordenada hasta encontrar texto.
+      while (pantalla[pos_y_temp][pos_x_temp] == -1 && pos_x_temp){
+        pos_x_temp--;
       }
     }
-    (*pos_buffer) = pantalla[pos_y_temporal][pos_x_temporal]; // Asignamos la posición del búffer a la indicada por la pantalla.
+    (*pos_buffer) = pantalla[pos_y_temp][pos_x_temp]; // Asigna posicion del buffer a la indicada por la pantalla.
 
-    // Asignamos las variables calculadas.
-    (*pos_y) = pos_y_temporal;
-    (*pos_x) = pos_x_temporal;
+    // Asigna las variables calculadas.
+    (*pos_y) = pos_y_temp;
+    (*pos_x) = pos_x_temp;
   }else{
-    if (pos_buffer_temporal > 0 && (*buffer)[pos_buffer_temporal] == '\n'){
-      --pos_buffer_temporal;
+    if (pos_buffer_temp > 0 && (*buffer)[pos_buffer_temp] == '\n'){
+      --pos_buffer_temp;
     }
 
-    // En caso de que no dispongamos de líneas disponibles arriba en la pantalla, verificamos si contamos con líneas previas en el búffer.
-    while (pos_buffer_temporal > 0 && (*buffer)[pos_buffer_temporal] != '\n'){
-      pos_buffer_temporal--;
+    // En caso de que no contar con lineas disponibles arriba en pantalla, se verifica si existen lineas previas en buffer.
+    while (pos_buffer_temp > 0 && (*buffer)[pos_buffer_temp] != '\n'){
+      pos_buffer_temp--;
     }
 
-    // En caso de que si contemos con líneas previas, cargamos la línea inmediata anterior.
-    if (pos_buffer_temporal > 0 && (*buffer)[pos_buffer_temporal] == '\n'){
-      for (pos_x_temporal = 0; pos_x_temporal < columnas_maximas && (pos_buffer_temporal - pos_x_temporal) > 0 && (*buffer)[pos_buffer_temporal - pos_x_temporal] != '\n'; pos_x_temporal++)
+    // Se carga la línea inmediata anterior si se cuenta con lineas previas en buffer.
+    if (pos_buffer_temp > 0 && (*buffer)[pos_buffer_temp] == '\n'){
+      for (pos_x_temp = 0; pos_x_temp < maxCols && (pos_buffer_temp - pos_x_temp) > 0 && (*buffer)[pos_buffer_temp - pos_x_temp] != '\n'; pos_x_temp++)
         ;
 
-      (*pos_buffer) = pos_buffer_temporal;
-      (*pos_x) = pos_x_temporal;
+      (*pos_buffer) = pos_buffer_temp;
+      (*pos_x) = pos_x_temp;
     }
   }
 }
 
-void tecla_izquierda(int *pos_x, int *pos_buffer){
-  // En caso de que sea posible, reducimos la posición en x del cursor.
+void leftKey(int *pos_x, int *pos_buffer){
+  // Reduce posicion en x del cursor
   if ((*pos_x) && (*pos_buffer)){
     (*pos_x)--;
     (*pos_buffer)--;
   }
 }
 
-void tecla_derecha(int *pos_x, int *pos_buffer, int columnas_maximas, size_t tamanio_buffer, char **buffer){
-  // En caso de que sea posible, aumentamos la posición en x del cursor.
-  if ((*pos_x) < columnas_maximas && (*pos_buffer) < ((int)tamanio_buffer) && (*buffer)[(*pos_buffer)] != '\n' && (*buffer)[(*pos_buffer)] != '\0'){
+void rightKey(int *pos_x, int *pos_buffer, int maxCols, size_t bufferSize, char **buffer){
+  // Aumenta posicion en x del cursor.
+  if ((*pos_x) < maxCols && (*pos_buffer) < ((int)bufferSize) && (*buffer)[(*pos_buffer)] != '\n' && (*buffer)[(*pos_buffer)] != '\0'){
     (*pos_x)++;
     (*pos_buffer)++;
   }
 }
 
-void tecla_borrar(int *pos_x, int *pos_y, char **buffer, size_t *tamanio_buffer, int *pos_buffer, int **pantalla){
-  // Verificamos que estemos en una posición válida para eliminar el caracter.
+void delKey(int *pos_x, int *pos_y, char **buffer, size_t *bufferSize, int *pos_buffer, int **pantalla){
+  // Verifica que exista una posicion valida para eliminar el caracter.
   if ((*pos_buffer) - 1 >= 0){
-    // Reducimos el tamaño de la memoria y recorremos la memoria restante en nuestro búffer un caracter.
-    memmove(&(*buffer)[(*pos_buffer) - 1], &(*buffer)[(*pos_buffer)], ((int)(--(*tamanio_buffer))) * sizeof(*(*buffer)));
+    // Reduce el tamaño de la memoria y recorre la memoria restante en buffer un caracter.
+    memmove(&(*buffer)[(*pos_buffer) - 1], &(*buffer)[(*pos_buffer)], ((int)(--(*bufferSize))) * sizeof(*(*buffer)));
 
-    (*pos_buffer)--;// Reducimos nuestra posición en el búffer.
+    (*pos_buffer)--;// Reduce posicion en buffer.
 
-    // Verificamos si podemos reducir nuestra posición en x actual en la pantalla (columnas)
-    if ((*pos_x)){
+    // Verifica si se puede reducir posicion en x actual en la pantalla (columnas)
+    if ((*pos_x)-1 >=0){
       (*pos_x)--;
-    }else if ((*pos_y)){
-      // En caso de que no podamos reducir nuestra posición en x (columnas) pero si en y (filas), buscamos el último caracter
-      // de la siguiente línea en el búffer.
+    }else if ((*pos_y)-1 >=0){
+      // En caso de no poder reducir posición en x (columnas) pero si en y (filas), se busca el ultimo caracter de la siguiente linea en el buffer.
       while (pantalla[(*pos_y) - 1][(*pos_x) + 1] != -1){
         (*pos_x)++;
       }
@@ -408,112 +381,112 @@ void tecla_borrar(int *pos_x, int *pos_y, char **buffer, size_t *tamanio_buffer,
   }
 }
 
-void tecla_cualquiera(char **buffer, size_t *tamanio_buffer, int tecla_presionada, int *pos_buffer, int *pos_x, int columnas_maximas, int *pos_y, int filas_maximas){
-  int pos_buffer_temporal; // Para iterar dentro de nuestro búffer de memoria.
-  char *buffer_temporal;   // Para realizar la copia del búffer.
+void anyKey(char **buffer, size_t *bufferSize, int pressedKey, int *pos_buffer, int *pos_x, int maxCols, int *pos_y, int maxRows){
+  int pos_buffer_temp;
+  char *buffer_temp;   
 
-  // Creamos un nuevo búffer con el tamaño aumentado.
-  buffer_temporal = malloc(((*tamanio_buffer) + 1) * sizeof(char));
+  // Crea un nuevo buffer con el tamaño aumentado.
+  buffer_temp = malloc(((*bufferSize) + 1) * sizeof(char));
 
-  for (pos_buffer_temporal = 0; pos_buffer_temporal < (*pos_buffer); pos_buffer_temporal++){
-    buffer_temporal[pos_buffer_temporal] = (*buffer)[pos_buffer_temporal];
+  for (pos_buffer_temp = 0; pos_buffer_temp < (*pos_buffer); pos_buffer_temp++){
+    buffer_temp[pos_buffer_temp] = (*buffer)[pos_buffer_temp];
   }
 
-  // Recorremos los elementos dentro de nuestro búffer de memoria en una unidad.
-  for (pos_buffer_temporal = ((int)(*tamanio_buffer)); pos_buffer_temporal > (*pos_buffer); pos_buffer_temporal--){
-    buffer_temporal[pos_buffer_temporal] = (*buffer)[pos_buffer_temporal - 1];
+  // Recorre los elementos dentro del buffer de memoria en una unidad.
+  for (pos_buffer_temp = ((int)(*bufferSize)); pos_buffer_temp > (*pos_buffer); pos_buffer_temp--){
+    buffer_temp[pos_buffer_temp] = (*buffer)[pos_buffer_temp - 1];
   }
 
-  // Si la tecla es "Enter", manualmente colocamos el caracter y aumentamos nuestra posición en y.
-  if (tecla_presionada == '\n'){
-    buffer_temporal[pos_buffer_temporal] = '\n'; // Asignamos el salto de línea al búffer.
+  // Si la tecla es "Enter", manualmente coloca el caracter y aumenta posicion en y.
+  if (pressedKey == '\n'){
+    buffer_temp[pos_buffer_temp] = '\n'; // Asigna el salto de linea al buffer.
 
-    // Verificamos si podemos aumentar la coordenada en y.
-    if ((*pos_y) < (filas_maximas - 1)){
+    // Verifica si podemos aumentar la coordenada en y.
+    if ((*pos_y) < (maxRows - 1)){
       (*pos_y)++;
       (*pos_x) = 0;
     }
   }else{
-    // Si es cualquier otra tecla, hacemos un casting a caracter con su código ASCII.
-    buffer_temporal[pos_buffer_temporal] = (char)tecla_presionada;
+    // Si es cualquier otra tecla, hace un casting a caracter con su codigo ASCII.
+    buffer_temp[pos_buffer_temp] = (char)pressedKey;
   }
-  (*tamanio_buffer) += 1; // Aumentamos el tamaño del búffer.
-  free((*buffer)); // Borramos el búffer anterior.
-  (*buffer) = buffer_temporal; // Asignamos el nuevo búffer.
-  (*pos_buffer) += 1; // Aumentamos la posición dentro del búffer.
+  (*bufferSize) += 1; // Aumenta el tamaño del buffer.
+  free((*buffer)); // Borra el buffer anterior.
+  (*buffer) = buffer_temp; // Asigna el nuevo buffer.
+  (*pos_buffer) += 1; // Aumenta la posicion dentro del buffer.
 
-  // Si es posible, aumentamos la posición en x (columna) en nuestra pantalla actualmente.
-  if ((*pos_x + 1) < columnas_maximas){
+  // Si es posible, aumenta la posicion en x (columna) en pantalla actual.
+  if ((*pos_x + 1) < maxCols){
     (*pos_x)++;
   }
 }
 
-void tecla_esc(char *nombre_archivo, char **buffer, size_t tamanio_buffer){
-  FILE *archivo; // El archivo a abrir para guardar los datos.
+void escKey(char *fileName, char **buffer, size_t bufferSize){
+  FILE *fileFichero; 
 
-  archivo = fopen(nombre_archivo, "w");
+  fileFichero = fopen(fileName, "w");
 
-  // Verificamos que se haya podido abrir el archivo.
-  if (archivo == NULL){
+  // Verifica que se haya podido abrir el archivo.
+  if (fileFichero == NULL){
     exit(-1);
     return;
   }
 
-  // Verificamos que el búffer esté terminado con un EOF, sino, lo añadimos.
-  if ((*buffer)[tamanio_buffer] != EOF){
-    (*buffer)[tamanio_buffer] = EOF;
+  // Verifica que el buffer este terminado con un EOF, en caso contrario lo añade.
+  if ((*buffer)[bufferSize] != EOF){
+    (*buffer)[bufferSize] = EOF;
   }
-  fwrite(*buffer, sizeof(char), tamanio_buffer, archivo); // Guardamos nuestro búffer en el archivo.
-  fclose(archivo);
+  fwrite(*buffer, sizeof(char), bufferSize, fileFichero); // Guarda el buffer en archivo.
+  fclose(fileFichero);
 }
 
-void mostrar_pantalla(int pos_x, int pos_y, char **buffer, int filas_maximas, int columnas_maximas, int **pantalla){
-  char caracter_temporal;
-  int fila_actual, columna_actual;  
+void showScreen(int pos_x, int pos_y, char **buffer, int maxRows, int maxCols, int **pantalla){
+  char caracter_temp;
+  int actualRow, columna_actual;  
 
-  // Iteramos en las filas de la matriz.
-  for (fila_actual = 0; fila_actual < (filas_maximas - 1); fila_actual++){
-    // Iteramos sobre las columnas de la matriz.
-    for (columna_actual = 0; columna_actual < columnas_maximas; columna_actual++){
-      // Si es la posición de nuestro cursor, activamos el modo invertido para imprimir el texto.
-      if (fila_actual == pos_y && columna_actual == pos_x){
+  // Recorre las filas de la matriz.
+  for (actualRow = 0; actualRow < (maxRows - 1); actualRow++){
+    // Recorre las columnas de la matriz.
+    for (columna_actual = 0; columna_actual < maxCols; columna_actual++){
+      // Si es la posicion del cursor, activa el modo invertido para imprimir texto.
+      if (actualRow == pos_y && columna_actual == pos_x){
         attron(A_REVERSE);
       }
 
-      // Seleccionamos el tipo de caracter a imprimir.
-      if (pantalla[fila_actual][columna_actual] == -1){
-        caracter_temporal = CARACTER_VACIO; // En caso de estar vacío, imprimimos un caracter vacío.
-      }else if ((*buffer)[pantalla[fila_actual][columna_actual]] == '\n' || (*buffer)[pantalla[fila_actual][columna_actual]] == '\0'){
-        caracter_temporal = CARACTER_DE_CONTROL; // En caso de ser EOL o un salto de línea, usamos un caracter de control.
+      // Selecciona el tipo de caracter a imprimir.
+      if (pantalla[actualRow][columna_actual] == -1){
+        caracter_temp = CARACTER_VACIO; // En caso de estar vacio, imprime un caracter vacio.
+      }else if ((*buffer)[pantalla[actualRow][columna_actual]] == '\n' || (*buffer)[pantalla[actualRow][columna_actual]] == '\0'){
+        caracter_temp = CARACTER_DE_CONTROL; // En caso de ser EOL o salto de línea, usa un caracter de control.
       }else{
-        // En cualquier otro caso, mostramos el caracter presente en el índice almacenado en pantalla.
-        caracter_temporal = (*buffer)[pantalla[fila_actual][columna_actual]];
+        // En cualquier otro caso, muestra el caracter presente en el indice almacenado en pantalla.
+        caracter_temp = (*buffer)[pantalla[actualRow][columna_actual]];
       }
-      mvprintw(fila_actual + 1, columna_actual, "%c", caracter_temporal); // Imprimimos el caracter correspondiente en la coordenada actual.
+      mvprintw(actualRow + 1, columna_actual, "%c", caracter_temp); // Imprime el caracter correspondiente en la coordenada actual.
 
-      // Si es la posición de nuestro cursor, desactivamos el modo invertido para imprimir el texto.
-      if (fila_actual == pos_y && columna_actual == pos_x){
+      // Si es la posicion de cursor, desactiva el modo invertido para imprimir texto.
+      if (actualRow == pos_y && columna_actual == pos_x){
         attroff(A_REVERSE);
       }
     }
   }
 }
 
-void mostrar_estadisticas(char *nombre_archivo, char **buffer, size_t tamanio_buffer, int pos_x, int pos_y, int pos_buffer, int columnas_maximas){
-  int lineas, linea_actual, pos_buffer_temporal;
+void showStatistics(char *fileName, char **buffer, size_t bufferSize, int pos_x, int pos_y, int pos_buffer, int maxCols){
+  int lineas, linea_actual, pos_buffer_temp;
 
-  // Ciclo para contar el número de líneas presentes en nuestro editor actual.
-  for (pos_buffer_temporal = 0, lineas = 0, linea_actual = 0; pos_buffer_temporal < ((int)tamanio_buffer); pos_buffer_temporal++){
-    // Para saber la línea actual, contabilizamos únicamente aquellas antes de nuestra posición actual en el búffer.
-    if (pos_buffer_temporal < pos_buffer){
-      linea_actual += (*buffer)[pos_buffer_temporal] == '\n';
+  // Bucle para contar el numero de líneas presentes en editor actual.
+  for (pos_buffer_temp = 0, lineas = 0, linea_actual = 0; pos_buffer_temp < ((int)bufferSize); pos_buffer_temp++){
+    // Para saber la linea actual, contabiliza unicamente aquellas antes de la posicion actual en el buffer.
+    if (pos_buffer_temp < pos_buffer){
+      linea_actual += (*buffer)[pos_buffer_temp] == '\n';
     }
-    lineas += (*buffer)[pos_buffer_temporal] == '\n'; // Contabilización de líneas generales.
+    lineas += (*buffer)[pos_buffer_temp] == '\n'; // Contabilizacion de líneas generales.
   }
 
-  // Mostramos el "menú" de nuestro editor.
+  // Muestra el menu del editor
   attron(A_REVERSE);
-  mvhline(0, 0, '#', columnas_maximas);
-  mvprintw(0, 0, "Editando \"%s\" %s | ESC para Guardar y Salir | Líneas: %i | Línea Actual: %i | Col: %i | Fila: %i | Pos. Búffer: %i", nombre_archivo, existe_archivo(nombre_archivo) ? "" : "(Nuevo)", lineas, linea_actual, pos_x, pos_y, pos_buffer);
+  mvhline(0, 0, '#', maxCols);
+  mvprintw(0, 0, "Archivo: \"%s\" %s || ESC = Salir || Lineas: %i || Linea Actual: %i || Col: %i | Fila: %i | Pos. Buffer: %i", fileName, checkFileExists(fileName) ? "" : "(Nuevo)", lineas, linea_actual, pos_x, pos_y, pos_buffer);
   attroff(A_REVERSE);
 }
