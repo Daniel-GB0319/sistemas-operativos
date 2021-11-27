@@ -33,7 +33,7 @@ int main(int argc, char *argv[]){
   if (argc == 2){ // Se ingreso nombre de fileFichero como parametro
     fileName = argv[1];
   }else{ // No se ingreso nombre de fileFichero como parametro
-    printf("Para editar un fileFichero, ingrese el siguiente comando:\n");
+    printf("Para editar un fichero, ingrese el siguiente comando:\n");
     printf("%s /ruta_completa/fileFichero.txt\n\no intente con ruta relativa:\n\n", argv[0]);
     printf("%s ./fileFichero.txt\n\n", argv[0]);
     return 0;
