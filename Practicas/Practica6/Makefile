@@ -1,0 +1,29 @@
+CFLAGS = -I $(INCDIR) -lpthread
+INCDIR = include/
+
+servidor : servidor.o
+	@gcc servidor.o -o servidor $(CFLAGS)
+	@rm -f *.o *.d
+
+tarjeta : tarjeta.o
+	@gcc tarjeta.o -o tarjeta $(CFLAGS)
+	@rm -f *.o *.d
+
+administrador : administrador.o
+	@gcc administrador.o -o administrador $(CFLAGS)
+	@rm -f *.o *.d
+
+%.o : %.c
+	@gcc -c -MD $< -o $@ $(CFLAGS)
+
+-include *.d
+
+.PHONY : all clean
+
+all : servidor tarjeta administrador
+	@echo "-*Compilación completa*-"
+
+clean :
+	@ipcrm -a
+	@rm -f sem_* shm_*
+	@rm -f servidor tarjeta administrador *.o *.d
